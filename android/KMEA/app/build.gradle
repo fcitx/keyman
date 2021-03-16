@@ -46,6 +46,7 @@ android {
                 //showStandardStreams = true // If we want test console log output to show during builds.
             }
             systemProperty 'kmeaTestMode', 'true'
+            systemProperty 'robolectric.dependency.repo.url', 'https://repo1.maven.org/maven2'
             workingDir = "../" // Defaults to the `app` subdirectory, which is different from Android Studio's default.
 
             //Avoid Warning: an illegal reflective access operation has occurred
