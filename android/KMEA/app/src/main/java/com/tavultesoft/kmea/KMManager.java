@@ -2553,6 +2553,7 @@ public final class KMManager {
 
           // Perform left-deletions
           if (dn > 0) {
+            Log.d(TAG, "sysKeyboard left deletion dn: " + dn);
             performLeftDeletions(ic, dn);
           }
 

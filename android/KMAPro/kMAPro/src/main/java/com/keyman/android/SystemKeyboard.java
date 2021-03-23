@@ -37,6 +37,7 @@ public class SystemKeyboard extends InputMethodService implements OnKeyboardEven
 
   private static View inputView = null;
   private static ExtractedText exText = null;
+  private static boolean isNumericField = false;
   private KMHardwareKeyboardInterpreter interpreter = null;
 
   private static final String TAG = "SystemKeyboard";
@@ -123,13 +124,17 @@ public class SystemKeyboard extends InputMethodService implements OnKeyboardEven
     attribute.imeOptions |= EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_FLAG_NO_FULLSCREEN;
     super.onStartInput(attribute, restarting);
     KMManager.onStartInput(attribute, restarting);
-    KMManager.resetContext(KeyboardType.KEYBOARD_TYPE_SYSTEM);
+    if (!KMManager.isKeyboardLoaded(KeyboardType.KEYBOARD_TYPE_SYSTEM)) {
+      Log.d(TAG, "onStartInput(): System Keyboard not loaded!");
+    }
+    //KMManager.resetContext(KeyboardType.KEYBOARD_TYPE_SYSTEM);
 
-    // Select numeric layer if applicable
+    // Check if the input field is for numeric layer
+    isNumericField = false;
     int inputType = attribute.inputType;
     if (((inputType & InputType.TYPE_MASK_CLASS) == InputType.TYPE_CLASS_NUMBER) ||
         ((inputType & InputType.TYPE_MASK_CLASS) == InputType.TYPE_CLASS_PHONE)) {
-      KMManager.setNumericLayer(KeyboardType.KEYBOARD_TYPE_SYSTEM);
+      isNumericField = true;
     }
 
     // Temporarily disable predictions if entering a hidden password field
@@ -148,6 +153,15 @@ public class SystemKeyboard extends InputMethodService implements OnKeyboardEven
       }
     }
 
+    updateTextContext();
+  }
+
+  /**
+   * Method to update and reset the system context. Also overrides to numeric layer as needed.
+   * Assumption: KMManager.SystemKeyboardLoaded is true
+   */
+  private void updateTextContext() {
+    Log.d(TAG, "updateContext()");
     InputConnection ic = getCurrentInputConnection();
     if (ic != null) {
       ExtractedText icText = ic.getExtractedText(new ExtractedTextRequest(), 0);
@@ -156,10 +170,21 @@ public class SystemKeyboard extends InputMethodService implements OnKeyboardEven
         int selStart = icText.startOffset + icText.selectionStart;
         int selEnd = icText.startOffset + icText.selectionEnd;
         boolean didUpdateSelection = KMManager.updateSelectionRange(KeyboardType.KEYBOARD_TYPE_SYSTEM, selStart, selEnd);
+        if (didUpdateSelection) {
+          KMManager.resetContext(KeyboardType.KEYBOARD_TYPE_SYSTEM);
+          Log.d(TAG, "KMManager.resetContext(SYSTEM)");
+        }
         if (!didUpdateText || !didUpdateSelection)
           exText = icText;
       }
+    } else {
+      Log.d(TAG, "InputConnection null");
     }
+
+    if (isNumericField) {
+      KMManager.setNumericLayer(KeyboardType.KEYBOARD_TYPE_SYSTEM);
+    }
+
   }
 
   @Override
@@ -212,8 +237,12 @@ public class SystemKeyboard extends InputMethodService implements OnKeyboardEven
   @Override
   public void onKeyboardLoaded(KeyboardType keyboardType) {
     if (keyboardType == KeyboardType.KEYBOARD_TYPE_SYSTEM) {
-      if (exText != null)
-        exText = null;
+      String str = (exText != null) ? exText.text.toString() : "";
+      Log.d(TAG, "onKeyboardLoaded(). exText: " + str);
+      //if (exText != null)
+        //exText = null;
+
+      updateTextContext();
     }
   }
 
